@@ -17,15 +17,17 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative py-20 overflow-hidden bg-primary text-white">
         <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <Image 
-            src={heroImage?.imageUrl || ''} 
-            alt="Background" 
-            fill 
-            className="object-cover"
-            data-ai-hint="blue abstract"
-          />
+          {heroImage?.imageUrl && (
+            <Image 
+              src={heroImage.imageUrl} 
+              alt="Background" 
+              fill 
+              className="object-cover"
+              data-ai-hint="blue abstract"
+            />
+          )}
         </div>
-        <div className="max-w-7xl mx-auto px-4 relative z-10 text-center lg:text-left grid lg:grid-cols-2 gap-12 items-center">
+        <div className="max-w-7xl auto px-4 relative z-10 text-center lg:text-left grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <div className="inline-flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full text-sm font-medium border border-white/20">
               <Shield className="h-4 w-4" />

@@ -109,7 +109,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updateClaimStatus = (claimId: string, status: Claim['status']) => {
     setClaims(prev => prev.map(c => {
       if (c.id === claimId) {
-        // If approved, update item status too
         if (status === 'APPROVED') {
           setFoundItems(found => found.map(f => f.id === c.foundItemId ? { ...f, status: 'CLAIMED' } : f));
         }
