@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-bg",
+      "description": "Abstract blue professional background",
+      "imageUrl": "https://picsum.photos/seed/sentry1/1200/800",
+      "imageHint": "blue abstract"
+    },
+    {
+      "id": "item-electronics",
+      "description": "Lost electronic device",
+      "imageUrl": "https://picsum.photos/seed/elec/400/300",
+      "imageHint": "smartphone laptop"
+    },
+    {
+      "id": "item-wallet",
+      "description": "Lost wallet",
+      "imageUrl": "https://picsum.photos/seed/wallet/400/300",
+      "imageHint": "wallet leather"
+    },
+    {
+      "id": "item-keys",
+      "description": "Lost keys",
+      "imageUrl": "https://picsum.photos/seed/keys/400/300",
+      "imageHint": "keys keychain"
+    }
+  ]
+}
