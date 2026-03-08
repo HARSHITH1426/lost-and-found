@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * ItemSentry Pro Security Rules
+     *
+     * Core Philosophy:
+     * This ruleset implements a robust Role-Based Access Control (RBAC) model combined with strict 
+     * user-ownership validation. It prioritizes Authorization Independence by relying on denormalized 
+     * UID fields within documents (e.g., reportedByUserId, claimingUserId) to ensure security 
+     * decisions are performant and do not require excessive cross-document lookups.
+     *
+     * Data Structure:
+     * - /users/{userId}: Private user profiles secured by path-based ownership.
+     * - /roles_admin/{userId} & /roles_staff/{userId}: System-wide roles defined by document existence.
+     * - /lost_items, /found_items, /claims: Top-level collections for global search and management.
+     *
+     * Key Security Decisions:
+     * - RBAC via "Shadow Collections": Administrative and Staff roles are determined by the existence 
+     *   of a document in specific role collections, providing a clear audit trail.
+     * - Public Read/Private Write: Lost and Found items are publicly searchable to facilitate matches, 
+     *   but only owners or authorized staff can modify records.
+     * - Relational Integrity: Critical fields like 'reportedByUserId' or 'claimingUserId' are enforced 
+     *   on creation and made immutable on update to prevent unauthorized data hijacking.
+     * - Prototyping Flexibility: Rules strictly enforce "WHO" can access data, but allow flexibility 
+     *   on the "WHAT" (data schema) to support rapid development iterations.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    function isStaff() {
+      return isSignedIn() && (exists(/databases/$(database)/documents/roles_staff/$(request.auth.uid)) || isAdmin());
+    }
+
+    function isDataOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    function isExistingOwner(ownerId) {
+      return resource != null && isDataOwner(ownerId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for User profiles. Users can manage their own profile; Staff/Admins can view all.
+     * @path /users/{userId}
+     * @allow get, list: (isOwner(userId) || isStaff())
+     * @deny create: (request.auth.uid != userId) - Prevents creating profiles for other users.
+     * @principle Path-based ownership for private user data.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId) || isStaff();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if (isOwner(userId) || isStaff()) && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description RBAC marker for Admin privileges. Access is restricted to Admins only.
+     * @path /roles_admin/{userId}
+     * @allow get: isSignedIn() - Required for the 'exists' check in roles.
+     * @deny write: !isAdmin()
+     * @principle Structural Segregation for Role-Based Access Control.
+     */
+    match /roles_admin/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description RBAC marker for Staff privileges. Access is restricted to Admins.
+     * @path /roles_staff/{userId}
+     * @allow get: isSignedIn()
+     * @deny write: !isAdmin()
+     * @principle Structural Segregation for Role-Based Access Control.
+     */
+    match /roles_staff/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Lost items are publicly viewable for matching. Creation and updates are restricted to the reporter or staff.
+     * @path /lost_items/{lostItemId}
+     * @allow get, list: if true
+     * @deny update: !isDataOwner(resource.data.reportedByUserId) && !isStaff()
+     * @principle Public Read with Owner-Only Writes using denormalized identity.
+     */
+    match /lost_items/{lostItemId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.reportedByUserId == request.auth.uid;
+      allow update: if (isExistingOwner(resource.data.reportedByUserId) || isStaff()) && request.resource.data.reportedByUserId == resource.data.reportedByUserId;
+      allow delete: if (isExistingOwner(resource.data.reportedByUserId) || isStaff());
+    }
+
+    /**
+     * @description Found items are registered by staff and are publicly searchable.
+     * @path /found_items/{foundItemId}
+     * @allow get, list: if true
+     * @deny create: !isStaff() - Only staff can register found items.
+     * @principle Staff-only creation with public visibility for discovery.
+     */
+    match /found_items/{foundItemId} {
+      allow get, list: if true;
+      allow create: if isStaff() && request.resource.data.registeredByUserId == request.auth.uid;
+      allow update: if isStaff() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Claims are private between the claimant and the staff.
+     * @path /claims/{claimId}
+     * @allow get: (isDataOwner(resource.data.claimingUserId) || isStaff())
+     * @deny list: !isStaff() && (request.query.limit > 0) - Note: standard users must query specifically for their UID.
+     * @principle Shared access between a specific user (owner) and a role (staff).
+     */
+    match /claims/{claimId} {
+      allow get: if isDataOwner(resource.data.claimingUserId) || isStaff();
+      // List is allowed for staff (management) or for users filtering by their own UID
+      allow list: if isStaff() || (isSignedIn() && request.query.filters.claimingUserId == request.auth.uid);
+      allow create: if isSignedIn() && request.resource.data.claimingUserId == request.auth.uid;
+      allow update: if (isExistingOwner(resource.data.claimingUserId) || isStaff()) && request.resource.data.claimingUserId == resource.data.claimingUserId;
+      allow delete: if isStaff() && resource != null;
+    }
+  }
+}
