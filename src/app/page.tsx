@@ -43,20 +43,20 @@ export default function Home() {
             <div className="flex flex-wrap justify-center lg:justify-start gap-4">
               {currentUser ? (
                 <Link href="/dashboard">
-                  <Button size="lg" className="bg-white text-primary hover:bg-blue-50">
-                    Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 group">
+                    Go to Dashboard <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
               ) : (
                 <>
                   <Link href="/auth/login">
-                    <Button size="lg" className="bg-white text-primary hover:bg-blue-50">
-                      Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 group">
+                      Get Started <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </Link>
                   <Link href="/items/search">
-                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                      Search Items <Search className="ml-2 h-4 w-4" />
+                    <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 group">
+                      Search Items <Search className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                     </Button>
                   </Link>
                 </>
