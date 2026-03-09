@@ -1,135 +1,150 @@
 
 "use client"
 
-import { useState, useEffect, createContext, useContext } from 'react';
-import { User, LostItem, FoundItem, Claim } from './types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
+import { collection, query, doc, getDoc } from 'firebase/firestore';
+import { UserProfile, LostItemReport, FoundItemRecord, OwnershipClaim, UserRole } from './types';
+import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { signInAnonymously, signOut } from 'firebase/auth';
 
-interface AppState {
-  currentUser: User | null;
-  lostItems: LostItem[];
-  foundItems: FoundItem[];
-  claims: Claim[];
-  login: (email: string, role: 'USER' | 'STAFF' | 'ADMIN') => void;
+interface DatabaseState {
+  currentUser: UserProfile | null;
+  lostItems: LostItemReport[];
+  foundItems: FoundItemRecord[];
+  claims: OwnershipClaim[];
+  isLoading: boolean;
+  login: (email: string, role: UserRole) => void;
   logout: () => void;
-  addLostItem: (item: Omit<LostItem, 'id' | 'status' | 'type' | 'reportedBy'>) => void;
-  addFoundItem: (item: Omit<FoundItem, 'id' | 'status' | 'type' | 'reportedBy'>) => void;
-  createClaim: (claim: Omit<Claim, 'id' | 'status' | 'date'>) => void;
-  updateClaimStatus: (claimId: string, status: Claim['status']) => void;
+  addLostItem: (data: Partial<LostItemReport>) => void;
+  addFoundItem: (data: Partial<FoundItemRecord>) => void;
+  createClaim: (data: any) => void;
+  updateClaimStatus: (claimId: string, status: OwnershipClaim['status']) => void;
 }
 
-const AppContext = createContext<AppState | undefined>(undefined);
+const StoreContext = createContext<DatabaseState | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [lostItems, setLostItems] = useState<LostItem[]>([]);
-  const [foundItems, setFoundItems] = useState<FoundItem[]>([]);
-  const [claims, setClaims] = useState<Claim[]>([]);
+  const { user } = useUser();
+  const db = useFirestore();
+  const auth = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
 
-  // Load initial state
-  useEffect(() => {
-    const savedUser = localStorage.getItem('sentry_user');
-    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+  const lostQuery = useMemoFirebase(() => query(collection(db, 'lost_items')), [db]);
+  const foundQuery = useMemoFirebase(() => query(collection(db, 'found_items')), [db]);
+  const claimsQuery = useMemoFirebase(() => query(collection(db, 'claims')), [db]);
 
-    const savedLost = localStorage.getItem('sentry_lost');
-    if (savedLost) setLostItems(JSON.parse(savedLost));
-
-    const savedFound = localStorage.getItem('sentry_found');
-    if (savedFound) setFoundItems(JSON.parse(savedFound));
-
-    const savedClaims = localStorage.getItem('sentry_claims');
-    if (savedClaims) setClaims(JSON.parse(savedClaims));
-  }, []);
-
-  // Save state
-  useEffect(() => {
-    if (currentUser) localStorage.setItem('sentry_user', JSON.stringify(currentUser));
-    else localStorage.removeItem('sentry_user');
-  }, [currentUser]);
+  const { data: lostItems, isLoading: loadingLost } = useCollection<LostItemReport>(lostQuery);
+  const { data: foundItems, isLoading: loadingFound } = useCollection<FoundItemRecord>(foundQuery);
+  const { data: claims, isLoading: loadingClaims } = useCollection<OwnershipClaim>(claimsQuery);
 
   useEffect(() => {
-    localStorage.setItem('sentry_lost', JSON.stringify(lostItems));
-  }, [lostItems]);
+    if (user && db) {
+      const userRef = doc(db, 'users', user.uid);
+      getDoc(userRef).then(snap => {
+        if (snap.exists()) {
+          setProfile(snap.data() as UserProfile);
+        }
+      });
+    } else {
+      setProfile(null);
+    }
+  }, [user, db]);
 
-  useEffect(() => {
-    localStorage.setItem('sentry_found', JSON.stringify(foundItems));
-  }, [foundItems]);
-
-  useEffect(() => {
-    localStorage.setItem('sentry_claims', JSON.stringify(claims));
-  }, [claims]);
-
-  const login = (email: string, role: 'USER' | 'STAFF' | 'ADMIN') => {
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
-      email,
-      role
-    };
-    setCurrentUser(user);
+  const login = (email: string, role: UserRole) => {
+    signInAnonymously(auth).then(({ user: firebaseUser }) => {
+      const profileData: UserProfile = {
+        id: firebaseUser.uid,
+        email,
+        displayName: email.split('@')[0],
+        role,
+        createdAt: new Date().toISOString()
+      };
+      setDocumentNonBlocking(doc(db, 'users', firebaseUser.uid), profileData, { merge: true });
+      setProfile(profileData);
+    });
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-  };
+  const logout = () => signOut(auth);
 
-  const addLostItem = (item: Omit<LostItem, 'id' | 'status' | 'type' | 'reportedBy'>) => {
-    if (!currentUser) return;
-    const newItem: LostItem = {
-      ...item,
-      id: `L-${Date.now()}`,
-      type: 'LOST',
+  const addLostItem = (data: Partial<LostItemReport>) => {
+    if (!user || !db) return;
+    const report: Omit<LostItemReport, 'id'> = {
+      category: data.category || 'Other',
+      title: data.title || '',
+      description: data.description || '',
+      location: data.location || data.locationLost || '',
+      date: data.date || data.dateLost || new Date().toISOString().split('T')[0],
+      reportedByUserId: user.uid,
       status: 'OPEN',
-      reportedBy: currentUser.id
+      createdAt: new Date().toISOString()
     };
-    setLostItems(prev => [newItem, ...prev]);
+    addDocumentNonBlocking(collection(db, 'lost_items'), report);
   };
 
-  const addFoundItem = (item: Omit<FoundItem, 'id' | 'status' | 'type' | 'reportedBy'>) => {
-    if (!currentUser) return;
-    const newItem: FoundItem = {
-      ...item,
-      id: `F-${Date.now()}`,
-      type: 'FOUND',
+  const addFoundItem = (data: Partial<FoundItemRecord>) => {
+    if (!user || !db) return;
+    const record: Omit<FoundItemRecord, 'id'> = {
+      category: data.category || 'Other',
+      title: data.title || '',
+      description: data.description || '',
+      location: data.location || data.locationFound || '',
+      date: data.date || data.dateFound || new Date().toISOString().split('T')[0],
+      registeredByUserId: user.uid,
       status: 'OPEN',
-      reportedBy: currentUser.id
+      createdAt: new Date().toISOString()
     };
-    setFoundItems(prev => [newItem, ...prev]);
+    addDocumentNonBlocking(collection(db, 'found_items'), record);
   };
 
-  const createClaim = (claimData: Omit<Claim, 'id' | 'status' | 'date'>) => {
-    const newClaim: Claim = {
-      ...claimData,
-      id: `C-${Date.now()}`,
+  const createClaim = (data: any) => {
+    if (!user || !db) return;
+    const claim: Omit<OwnershipClaim, 'id'> = {
+      foundItemId: data.foundItemId,
+      claimingUserId: user.uid,
+      userName: profile?.displayName || data.userName || 'Unknown',
+      description: data.description || data.proofDescription || '',
       status: 'PENDING',
       date: new Date().toISOString()
     };
-    setClaims(prev => [newClaim, ...prev]);
+    addDocumentNonBlocking(collection(db, 'claims'), claim);
   };
 
-  const updateClaimStatus = (claimId: string, status: Claim['status']) => {
-    setClaims(prev => prev.map(c => {
-      if (c.id === claimId) {
-        if (status === 'APPROVED') {
-          setFoundItems(found => found.map(f => f.id === c.foundItemId ? { ...f, status: 'CLAIMED' } : f));
-        }
-        return { ...c, status };
+  const updateClaimStatus = (claimId: string, status: OwnershipClaim['status']) => {
+    if (!db) return;
+    const claimRef = doc(db, 'claims', claimId);
+    updateDocumentNonBlocking(claimRef, { status });
+    
+    if (status === 'APPROVED') {
+      const claim = claims?.find(c => c.id === claimId);
+      if (claim) {
+        const itemRef = doc(db, 'found_items', claim.foundItemId);
+        updateDocumentNonBlocking(itemRef, { status: 'CLAIMED' });
       }
-      return c;
-    }));
+    }
   };
 
   return (
-    <AppContext.Provider value={{
-      currentUser, lostItems, foundItems, claims,
-      login, logout, addLostItem, addFoundItem, createClaim, updateClaimStatus
+    <StoreContext.Provider value={{
+      currentUser: profile,
+      lostItems: lostItems || [],
+      foundItems: foundItems || [],
+      claims: claims || [],
+      isLoading: loadingLost || loadingFound || loadingClaims,
+      login,
+      logout,
+      addLostItem,
+      addFoundItem,
+      createClaim,
+      updateClaimStatus
     }}>
       {children}
-    </AppContext.Provider>
+    </StoreContext.Provider>
   );
 }
 
 export function useApp() {
-  const context = useContext(AppContext);
-  if (!context) throw new Error('useApp must be used within AppProvider');
+  const context = useContext(StoreContext);
+  if (!context) throw new Error('useApp requires AppProvider');
   return context;
 }

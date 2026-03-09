@@ -1,38 +1,49 @@
 
+/**
+ * Core Data Models
+ * Defined to support relational database principles in a cloud environment.
+ */
+
 export type UserRole = 'USER' | 'STAFF' | 'ADMIN';
 
-export interface User {
+export interface UserProfile {
   id: string;
-  name: string;
   email: string;
+  displayName: string;
   role: UserRole;
+  createdAt: string;
 }
 
-export type ItemStatus = 'OPEN' | 'CLOSED' | 'CLAIMED' | 'PENDING';
+export type ItemStatus = 'OPEN' | 'CLOSED' | 'CLAIMED';
 
-export interface BaseItem {
+export interface LostItemReport {
   id: string;
   category: string;
-  keywords: string;
+  title: string;
   description: string;
   location: string;
   date: string;
-  status: ItemStatus;
-  reportedBy: string; // User ID
+  reportedByUserId: string;
+  status: 'OPEN' | 'CLOSED';
+  createdAt: string;
 }
 
-export interface LostItem extends BaseItem {
-  type: 'LOST';
+export interface FoundItemRecord {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  location: string;
+  date: string;
+  registeredByUserId: string;
+  status: 'OPEN' | 'CLAIMED';
+  createdAt: string;
 }
 
-export interface FoundItem extends BaseItem {
-  type: 'FOUND';
-}
-
-export interface Claim {
+export interface OwnershipClaim {
   id: string;
   foundItemId: string;
-  userId: string;
+  claimingUserId: string;
   userName: string;
   description: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';

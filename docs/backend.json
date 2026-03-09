@@ -1,443 +1,87 @@
+
 {
   "entities": {
-    "Role": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Role",
-      "type": "object",
-      "description": "Defines the different access roles within the system, such as User, Staff, and Admin.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Role entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the role (e.g., 'User', 'Staff', 'Admin')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the role's purpose and permissions."
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description"
-      ]
-    },
     "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents an individual user of the ItemSentry Pro system, capable of reporting lost items, claiming found items, or performing administrative/staff duties based on their assigned role.",
+      "description": "System users including Students, Staff, and Administrators.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "username": {
-          "type": "string",
-          "description": "A unique username for user identification, used for login (authentication handled externally)."
-        },
-        "email": {
-          "type": "string",
-          "description": "The user's unique email address.",
-          "format": "email"
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "contactNumber": {
-          "type": "string",
-          "description": "The user's primary contact phone number."
-        },
-        "address": {
-          "type": "string",
-          "description": "The user's physical address (optional)."
-        },
-        "roleId": {
-          "type": "string",
-          "description": "Reference to the User's assigned Role. (Relationship: Role 1:N User)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user account was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the user account was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["USER", "STAFF", "ADMIN"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "username",
-        "email",
-        "firstName",
-        "lastName",
-        "contactNumber",
-        "roleId",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "email", "role"]
     },
     "LostItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "LostItem",
       "type": "object",
-      "description": "Stores detailed information about an item that has been reported as lost by a user.",
+      "description": "Items reported as missing by users.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the LostItem entity."
-        },
-        "itemName": {
-          "type": "string",
-          "description": "The common name of the lost item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the lost item, possibly assisted by an AI tool."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category of the item (e.g., 'Electronics', 'Documents', 'Jewelry')."
-        },
-        "locationLost": {
-          "type": "string",
-          "description": "The approximate location where the item was lost."
-        },
-        "dateLost": {
-          "type": "string",
-          "description": "The date and time when the item was lost.",
-          "format": "date-time"
-        },
-        "color": {
-          "type": "string",
-          "description": "The color of the lost item (optional)."
-        },
-        "brand": {
-          "type": "string",
-          "description": "The brand or manufacturer of the lost item (optional)."
-        },
-        "serialNumber": {
-          "type": "string",
-          "description": "Any identifiable serial number or unique marking on the item (optional)."
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to an image of the lost item (optional).",
-          "format": "uri"
-        },
-        "reportedByUserId": {
-          "type": "string",
-          "description": "Reference to the User who reported the item as lost. (Relationship: User 1:N LostItem)"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the lost item report (e.g., 'Reported', 'Matched', 'Found', 'Closed')."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the lost item report was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the lost item report was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "locationLost": { "type": "string" },
+        "dateLost": { "type": "string", "format": "date" },
+        "reportedByUserId": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "itemName",
-        "description",
-        "category",
-        "locationLost",
-        "dateLost",
-        "reportedByUserId",
-        "status",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["title", "category", "reportedByUserId", "status"]
     },
     "FoundItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "FoundItem",
       "type": "object",
-      "description": "Stores detailed information about an item that has been registered by staff as found.",
+      "description": "Items registered by staff as found.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the FoundItem entity."
-        },
-        "itemName": {
-          "type": "string",
-          "description": "The common name of the found item."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the found item, possibly assisted by an AI tool."
-        },
-        "category": {
-          "type": "string",
-          "description": "The category of the item (e.g., 'Electronics', 'Documents', 'Jewelry')."
-        },
-        "locationFound": {
-          "type": "string",
-          "description": "The exact location where the item was found."
-        },
-        "dateFound": {
-          "type": "string",
-          "description": "The date and time when the item was found.",
-          "format": "date-time"
-        },
-        "color": {
-          "type": "string",
-          "description": "The color of the found item (optional)."
-        },
-        "brand": {
-          "type": "string",
-          "description": "The brand or manufacturer of the found item (optional)."
-        },
-        "serialNumber": {
-          "type": "string",
-          "description": "Any identifiable serial number or unique marking on the item (optional)."
-        },
-        "imageUrl": {
-          "type": "string",
-          "description": "URL to an image of the found item (optional).",
-          "format": "uri"
-        },
-        "registeredByUserId": {
-          "type": "string",
-          "description": "Reference to the Staff User who registered the found item. (Relationship: User 1:N FoundItem)"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the found item (e.g., 'Registered', 'Claimed', 'Returned', 'Archived')."
-        },
-        "storageLocation": {
-          "type": "string",
-          "description": "The physical location where the found item is currently stored."
-        },
-        "notes": {
-          "type": "string",
-          "description": "Internal notes added by staff regarding the found item."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the found item was registered.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the found item record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "locationFound": { "type": "string" },
+        "dateFound": { "type": "string", "format": "date" },
+        "registeredByUserId": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "CLAIMED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "itemName",
-        "description",
-        "category",
-        "locationFound",
-        "dateFound",
-        "registeredByUserId",
-        "status",
-        "storageLocation",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["title", "category", "registeredByUserId", "status"]
     },
     "Claim": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Claim",
       "type": "object",
-      "description": "Represents a user's request to claim a found item, along with the verification status by staff.",
+      "description": "Verification requests linking users to found items.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Claim entity."
-        },
-        "foundItemId": {
-          "type": "string",
-          "description": "Reference to the FoundItem being claimed. (Relationship: FoundItem 1:N Claim)"
-        },
-        "claimingUserId": {
-          "type": "string",
-          "description": "Reference to the User making the claim. (Relationship: User 1:N Claim)"
-        },
-        "claimDate": {
-          "type": "string",
-          "description": "The date and time when the claim was submitted.",
-          "format": "date-time"
-        },
-        "descriptionOfItem": {
-          "type": "string",
-          "description": "The claimant's description of the item, used for verification."
-        },
-        "proofOfOwnershipDetails": {
-          "type": "string",
-          "description": "Details provided by the claimant to prove ownership (e.g., unique markings, purchase details)."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the claim (e.g., 'Pending', 'Approved', 'Rejected', 'Verified', 'Completed')."
-        },
-        "staffVerificationNotes": {
-          "type": "string",
-          "description": "Internal notes added by staff during the claim verification process (optional)."
-        },
-        "verifiedByUserId": {
-          "type": "string",
-          "description": "Reference to the Staff User who verified the claim (optional, if pending). (Relationship: User 1:N Claim)"
-        },
-        "verificationDate": {
-          "type": "string",
-          "description": "The date and time when the claim was verified (optional, if pending).",
-          "format": "date-time"
-        },
-        "returnedDate": {
-          "type": "string",
-          "description": "The date and time when the item was physically returned to the claimant (optional).",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the claim record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp indicating when the claim record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "foundItemId": { "type": "string" },
+        "claimingUserId": { "type": "string" },
+        "proofDescription": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "claimDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "foundItemId",
-        "claimingUserId",
-        "claimDate",
-        "descriptionOfItem",
-        "proofOfOwnershipDetails",
-        "status",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["foundItemId", "claimingUserId", "status"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores individual user profiles. The document ID (`{userId}`) corresponds to the Firebase Authentication UID. Includes 'roleId' for application-level role management, though security rules rely on dedicated role collections for RBAC.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique Firebase Authentication User ID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "Role",
-          "schema": {
-            "$ref": "#/backend/entities/Role"
-          },
-          "description": "Represents the Admin role assignment. The existence of a document at this path signifies that the '{userId}' has administrative privileges. Used for Role-Based Access Control (RBAC) in security rules, prioritizing existence over content for authorization independence. Does not directly store full Role entity data, only a placeholder for access control.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique Firebase Authentication User ID assigned the Admin role."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_staff/{userId}",
-        "definition": {
-          "entityName": "Role",
-          "schema": {
-            "$ref": "#/backend/entities/Role"
-          },
-          "description": "Represents the Staff role assignment. The existence of a document at this path signifies that the '{userId}' has staff privileges. Used for Role-Based Access Control (RBAC) in security rules, prioritizing existence over content for authorization independence. Does not directly store full Role entity data, only a placeholder for access control.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique Firebase Authentication User ID assigned the Staff role."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/lost_items/{lostItemId}",
-        "definition": {
-          "entityName": "LostItem",
-          "schema": {
-            "$ref": "#/backend/entities/LostItem"
-          },
-          "description": "Stores details of items reported as lost. Includes denormalized 'reportedByUserId' for authorization independence, allowing direct ownership checks in security rules. Supports global search and query-as-authorization policies based on 'status' for public visibility.",
-          "params": [
-            {
-              "name": "lostItemId",
-              "description": "The unique identifier for the Lost Item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/found_items/{foundItemId}",
-        "definition": {
-          "entityName": "FoundItem",
-          "schema": {
-            "$ref": "#/backend/entities/FoundItem"
-          },
-          "description": "Stores details of items registered as found by staff. Includes denormalized 'registeredByUserId' for staff accountability and authorization independence. Supports global search and query-as-authorization policies based on 'status' for public visibility.",
-          "params": [
-            {
-              "name": "foundItemId",
-              "description": "The unique identifier for the Found Item."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/claims/{claimId}",
-        "definition": {
-          "entityName": "Claim",
-          "schema": {
-            "$ref": "#/backend/entities/Claim"
-          },
-          "description": "Stores details of claims made by users on found items. Includes denormalized 'claimingUserId' for user ownership and 'verifiedByUserId' for staff verification, ensuring authorization independence. Facilitates efficient listing and management by both claimants and staff.",
-          "params": [
-            {
-              "name": "claimId",
-              "description": "The unique identifier for the Claim."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure for ItemSentry Pro is designed to strictly adhere to the core principles of Authorization Independence, Structural Segregation, and DBAC, ensuring a secure, scalable, and debuggable system.\n\n**Authorization Independence (CRITICAL):** This is achieved by extensively denormalizing authorization context directly into the documents. For instance:\n*   `LostItem` documents (`/lost_items/{lostItemId}`) include `reportedByUserId` to directly link an item to its reporter. Security rules can check `request.auth.uid == resource.data.reportedByUserId` without fetching the user's profile.\n*   `FoundItem` documents (`/found_items/{foundItemId}`) include `registeredByUserId` for staff accountability. Staff authorization relies on the presence of a document in `/roles_staff/{userId}` or `/roles_admin/{userId}`.\n*   `Claim` documents (`/claims/{claimId}`) include `claimingUserId` and `verifiedByUserId`. This allows rules to verify ownership for the claimant (`request.auth.uid == resource.data.claimingUserId`) and staff verification without complex `get()` calls to other collections. This design completely eliminates hierarchical authorization dependencies, enabling atomic operations and greatly simplifying rule logic and debugging.\n\n**Structural Segregation (Homogeneous Security Posture):** Each collection maintains a consistent security posture. For example:\n*   `/users/{userId}` holds individual user profiles, primarily accessible by the owner and administrators.\n*   `/roles_admin/{userId}` and `/roles_staff/{userId}` are dedicated collections for role assignment, where the mere existence of a document grants the respective role. This provides a clear, explicit, and easily auditable RBAC mechanism without custom claims.\n*   `/lost_items`, `/found_items`, and `/claims` are top-level collections. While they contain sensitive data, their primary data-access patterns (searching, reporting, claiming) often require broad read access, with granular write/update access.\n\n**QAPs (Queries as Authorization Policies):** The structure facilitates secure `list` operations by making authorization intent explicit within documents and collection structures:\n*   `LostItem` and `FoundItem` are stored in top-level collections (`/lost_items`, `/found_items`). This allows efficient global search and listing operations. Security rules can then enforce that only items with a 'Reported' or 'Registered' status (public-facing) are viewable by general users, while owners or staff can access more details or modify their respective records. The `reportedByUserId` and `registeredByUserId` fields directly support ownership checks.\n*   `Claim` documents (`/claims/{claimId}`) are also in a top-level collection, enabling staff to list and manage all claims efficiently. Users can query claims where `claimingUserId == request.auth.uid` to see their own claims. Rules prevent unauthorized users from listing or reading claims they are not involved with.\n\n**Access Modeling:** Path-based ownership is used for `User` profiles (`/users/{userId}`). Global roles are managed by existence in `/roles_admin/{userId}` and `/roles_staff/{userId}`. Collaborative or public data (Lost Items, Found Items, Claims) are placed in top-level collections with denormalized owner/manager IDs, ensuring fine-grained control and list query support.\n\n**Data Clarity and Predictability:** The `status` field in `LostItem`, `FoundItem`, and `Claim` entities provides explicit state modeling, simplifying rule conditions and application logic. Consistent naming conventions (e.g., `{userId}`, `reportedByUserId`) enhance readability and maintainability across the database and security rules."
+    "/users/{userId}": {
+      "schema": "#/entities/User",
+      "description": "User profiles indexed by Auth UID."
+    },
+    "/lost_items/{itemId}": {
+      "schema": "#/entities/LostItem",
+      "description": "Global collection of lost item reports."
+    },
+    "/found_items/{itemId}": {
+      "schema": "#/entities/FoundItem",
+      "description": "Global collection of found items managed by staff."
+    },
+    "/claims/{claimId}": {
+      "schema": "#/entities/Claim",
+      "description": "Claims linking users and items."
+    }
   }
 }
