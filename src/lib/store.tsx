@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
-import { collection, query, doc, getDoc } from 'firebase/firestore';
+import { collection, query, doc, getDoc, where } from 'firebase/firestore';
 import { UserProfile, LostItemReport, FoundItemRecord, OwnershipClaim, UserRole } from './types';
 import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { signInAnonymously, signOut } from 'firebase/auth';
@@ -30,9 +30,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
+  // Lost and Found items are public read in security rules
   const lostQuery = useMemoFirebase(() => query(collection(db, 'lost_items')), [db]);
   const foundQuery = useMemoFirebase(() => query(collection(db, 'found_items')), [db]);
-  const claimsQuery = useMemoFirebase(() => query(collection(db, 'claims')), [db]);
+  
+  // Claims require authentication and specific filters for non-staff
+  const claimsQuery = useMemoFirebase(() => {
+    if (!db || !profile) return null;
+    
+    // Staff/Admin can see all claims
+    if (profile.role === 'STAFF' || profile.role === 'ADMIN') {
+      return collection(db, 'claims');
+    }
+    
+    // Regular users can only see their own claims (matches security rule requirement)
+    return query(collection(db, 'claims'), where('claimingUserId', '==', profile.id));
+  }, [db, profile]);
 
   const { data: lostItems, isLoading: loadingLost } = useCollection<LostItemReport>(lostQuery);
   const { data: foundItems, isLoading: loadingFound } = useCollection<FoundItemRecord>(foundQuery);
@@ -73,8 +86,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       category: data.category || 'Other',
       title: data.title || '',
       description: data.description || '',
-      location: data.location || data.locationLost || '',
-      date: data.date || data.dateLost || new Date().toISOString().split('T')[0],
+      location: data.location || '',
+      date: data.date || new Date().toISOString().split('T')[0],
       reportedByUserId: user.uid,
       status: 'OPEN',
       createdAt: new Date().toISOString()
@@ -88,8 +101,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       category: data.category || 'Other',
       title: data.title || '',
       description: data.description || '',
-      location: data.location || data.locationFound || '',
-      date: data.date || data.dateFound || new Date().toISOString().split('T')[0],
+      location: data.location || '',
+      date: data.date || new Date().toISOString().split('T')[0],
       registeredByUserId: user.uid,
       status: 'OPEN',
       createdAt: new Date().toISOString()
@@ -103,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       foundItemId: data.foundItemId,
       claimingUserId: user.uid,
       userName: profile?.displayName || data.userName || 'Unknown',
-      description: data.description || data.proofDescription || '',
+      description: data.description || '',
       status: 'PENDING',
       date: new Date().toISOString()
     };
@@ -130,7 +143,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       lostItems: lostItems || [],
       foundItems: foundItems || [],
       claims: claims || [],
-      isLoading: loadingLost || loadingFound || loadingClaims,
+      isLoading: loadingLost || loadingFound || (loadingClaims && !!profile),
       login,
       logout,
       addLostItem,
